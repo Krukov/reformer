@@ -63,6 +63,16 @@ class _Target:
         self._getter = _getter
         return self
 
+    def in_(self, container):
+        getter = self._getter
+        self._getter = lambda obj: (getter(obj) in container)
+        return self
+
+    def contains_(self, item):
+        getter = self._getter
+        self._getter = lambda obj: (item in getter(obj))
+        return self
+
     def to_(self, type):
         getter = self._getter
         self._getter = lambda obj: type(getter(obj))
@@ -214,9 +224,12 @@ class Reformer(metaclass=_ReformerMeta):
         for attr in self.__fields__:
             if attr not in [TARGET_ALIAS]:
                 value = getattr(self, attr)._get(target)
-                if not value and blank:
-                    result[attr] = blank if blank is not True else None
-                elif value:
+                if value is None:
+                    if blank and blank is not True:
+                        result[attr] = blank
+                    elif blank:
+                        result[attr] = None
+                else:
                     result[attr] = value
         return result
 

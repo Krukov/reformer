@@ -1,3 +1,4 @@
+import pytest
 
 from reformer import Reformer as R, item, link
 
@@ -13,11 +14,23 @@ def test_simple_value_field():
 
 
 def test_simple_int_field():
-    target = {'value': 10}
-    expect = {'test': 10}
+    target = {'value': 10, 'zero': 0}
+    expect = {'test': 10, 'zero': 0}
 
     class Map(R):
         test = link.value
+        zero = link.zero
+
+    assert Map.transform(target) == expect
+
+
+def test_simple_bool_field():
+    target = {'true': True, 'false': False}
+    expect = {'test_t': True, 'test_f': False}
+
+    class Map(R):
+        test_t = link.true
+        test_f = link.false
 
     assert Map.transform(target) == expect
 
@@ -238,7 +251,8 @@ def test_exception_at_wrong_field():
         test = link.test
         empty = link.empty
 
-    assert Map.transform(target)
+    with pytest.raises(KeyError):
+        Map.transform(target)
 
 
 def test_choice_fields():
@@ -248,5 +262,27 @@ def test_choice_fields():
     class Map(R):
         alias = link.type.choice_(['str', 'bool', 'int'])
         g = link.gender.choice_({'m': 'Man', 'w': 'Woman'})
+
+    assert Map.transform(target) == expect
+
+
+def test_in_fields():
+    target = {'gender': 'w'}
+    expect = {'woman': True, 'check': False}
+
+    class Map(R):
+        woman = link.gender.in_(['w', 'woman'])
+        check = link.gender.contains_('t')
+
+    assert Map.transform(target) == expect
+
+
+def test_slice_fields():
+    target = {'list': list(range(5)), 'text': 'my test here'}
+    expect = {'list': [3, 4], 'text': 'here'}
+
+    class Map(R):
+        list = link.list[3:5]
+        text = link.text[-4:]
 
     assert Map.transform(target) == expect
