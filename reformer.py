@@ -216,6 +216,7 @@ item = _Item()
 
 
 class Reformer(metaclass=_ReformerMeta):
+    _fields_ = ()
 
     @classmethod
     def transform(cls, _target, **kwargs):
@@ -227,7 +228,9 @@ class Reformer(metaclass=_ReformerMeta):
     def _transform(self, target, many=False, blank=True):
         if many:
             return [self._transform(item, blank=blank) for item in target]
-        result = {}
+        result = OrderedDict()
+        for field in self._fields_:
+            result[field] = target[field]
         for attr in self.__fields__:
             if attr not in [TARGET_ALIAS]:
                 value = getattr(self, attr)._get(target)
