@@ -1,21 +1,20 @@
-
+from operator import eq
 from collections import OrderedDict
-from typing import Callable, Any, Optional, List, Tuple, Dict
 
 __all__ = ['Reformer', 'link', 'item']
-ATTR_NAME: str = '__fields__'
-TARGET_ALIAS: str = 'target'
+ATTR_NAME = '__fields__'
+TARGET_ALIAS = 'target'
 
 
 class _Target:
 
-    def __init__(self, getter: Optional[Callable[[Any], Any]]=lambda obj: obj) -> None:
-        self._getter: Callable[[Any], Any] = getter
-        self.__item: bool = False
-        self.__null: bool = False
+    def __init__(self, getter=lambda obj: obj):
+        self._getter = getter
+        self.__item = False
+        self.__null = False
 
     @staticmethod
-    def __get_value(value, obj, item=None) -> Any:
+    def __get_value(value, obj, item=None):
         if isinstance(value, _Target):
             if item is not None and value.__item:
                 return value._get(item)
@@ -24,7 +23,7 @@ class _Target:
         return value
 
     @classmethod
-    def as_(cls, schema) -> Any:
+    def as_(cls, schema):
         def _getter(obj):
             if isinstance(schema, dict):
                 res = {}
@@ -61,6 +60,11 @@ class _Target:
                 return res
 
         self._getter = _getter
+        return self
+
+    def compare_(self, item, operator=eq):
+        getter = self._getter
+        self._getter = lambda obj: operator(getter(obj), self.__get_value(item, obj))
         return self
 
     def in_(self, container):
@@ -203,6 +207,9 @@ class _Item:
     def iter_(self, *args, **kwargs):
         return _Target().iter_(*args, **kwargs).item_
 
+    def as_(self, *args, **kwargs):
+        return _Target().as_(*args, **kwargs).item_
+
 
 link = _Link()
 item = _Item()
@@ -211,13 +218,13 @@ item = _Item()
 class Reformer(metaclass=_ReformerMeta):
 
     @classmethod
-    def transform(cls, _target: Any, **kwargs):
+    def transform(cls, _target, **kwargs):
         return cls()._transform(_target, **kwargs)
 
     link = link
     item = item
 
-    def _transform(self, target: Any, many: bool=False, blank=True):
+    def _transform(self, target, many=False, blank=True):
         if many:
             return [self._transform(item, blank=blank) for item in target]
         result = {}

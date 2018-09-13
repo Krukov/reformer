@@ -1,3 +1,6 @@
+
+from collections import OrderedDict
+
 import pytest
 
 from reformer import Reformer as R, item, link
@@ -76,7 +79,7 @@ def test_item_list_field():
 
 def test_item_dict_field():
     target = {
-        'fields': {'field_1': 'str', 'field_2': 'kg'},
+        'fields': OrderedDict((('field_1', 'str'), ('field_2', 'kg'))),
     }
     expect = {
         'res': {'str': 'field_1', 'kg': 'field_2'},
@@ -284,5 +287,18 @@ def test_slice_fields():
     class Map(R):
         list = link.list[3:5]
         text = link.text[-4:]
+
+    assert Map.transform(target) == expect
+
+
+def test_compare():
+    from operator import gt
+    target = {'one': 1, 'two': 2}
+    expect = {'one_two': False, 'one_is_one': True, 'one_more_two': False}
+
+    class Map(R):
+        one_two = link.one.compare_(link.two)
+        one_is_one = link.one.compare_(1)
+        one_more_two = link.one.compare_(link.two, gt)
 
     assert Map.transform(target) == expect
