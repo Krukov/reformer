@@ -1,4 +1,4 @@
-from operator import eq
+import operator
 from collections import OrderedDict
 
 __all__ = ['Reformer', 'link', 'item']
@@ -62,7 +62,7 @@ class _Target:
         self._getter = _getter
         return self
 
-    def compare_(self, item, operator=eq):
+    def compare_(self, item, operator=operator.eq):
         getter = self._getter
         self._getter = lambda obj: operator(getter(obj), self.__get_value(item, obj))
         return self
@@ -166,6 +166,24 @@ class _Target:
         else:
             self._getter = lambda obj: (other * getter(obj))
         return self
+
+    def __eq__(self, other):
+        return self.compare_(other)
+
+    def __gt__(self, other):
+        return self.compare_(other, operator.gt)
+
+    def __ge__(self, other):
+        return self.compare_(other, operator.ge)
+
+    def __lt__(self, other):
+        return self.compare_(other, operator.lt)
+
+    def __le__(self, other):
+        return self.compare_(other, operator.le)
+
+    def __hash__(self):
+        return hash(self._getter)
 
     def _get(self, obj):
         try:

@@ -304,6 +304,18 @@ def test_compare():
     assert Map.transform(target) == expect
 
 
+def test_compare_2():
+    target = {'one': 1, 'two': 2}
+    expect = {'one_two': False, 'one_is_one': True, 'one_more_two': False}
+
+    class Map(R):
+        one_two = link.one == link.two
+        one_is_one = link.one == 1
+        one_more_two = link.one >= link.two
+
+    assert Map.transform(target) == expect
+
+
 def test_default_fields():
     target = {'a': 1, 'b': 2, 'c': 'c'}
     expect = {'a': 1, 'c': 'c', 'o': 2}
