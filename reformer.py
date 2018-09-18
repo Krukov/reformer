@@ -38,7 +38,7 @@ class _Target:
             raise NotImplementedError
         return cls(getter=_getter)
 
-    def iter_(self, schema):
+    def iter_(self, schema, condition=None):
         getter = self._getter
 
         def _getter(obj):
@@ -50,12 +50,17 @@ class _Target:
                 res = {}
                 _key, _value = list(schema.items())[0]
                 for item in obj:
+                    if condition and not self.__get_value(condition, obj, item):
+                        continue
                     res[self.__get_value(_key, obj, item)] = self.__get_value(_value, obj, item)
                 return res
             if isinstance(schema, (tuple, list)):
                 res = []
                 _value = schema[0]
+
                 for item in obj:
+                    if condition and not self.__get_value(condition, obj, item):
+                        continue
                     res.append(self.__get_value(_value, obj, item))
                 return res
 
@@ -85,6 +90,9 @@ class _Target:
     def to_str(self):
         return self.to_(str)
 
+    def to_int(self):
+        return self.to_(int)
+
     def choice_(self, choices, default=None):
         getter = self._getter
 
@@ -98,6 +106,16 @@ class _Target:
             if isinstance(choices, dict):
                 return choices.get(obj, default)
             return getattr(choices, obj, default)
+        self._getter = _getter
+        return self
+
+    def call_(self, function):
+        getter = self._getter
+
+        def _getter(obj):
+            obj = getter(obj)
+            return function(obj)
+
         self._getter = _getter
         return self
 
@@ -134,6 +152,9 @@ class _Target:
         return self
 
     __getitem__ = __getattr__
+
+    def __iter__(self):
+        raise NotImplementedError
 
     def __add__(self, other):
         getter = self._getter

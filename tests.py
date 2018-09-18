@@ -52,6 +52,17 @@ def test_simple_dict_field():
     assert Map.transform(target) == expect
 
 
+def test_to_type():
+    target = {'value': '10', 'zero': 0}
+    expect = {'value': 10, 'zero': '0'}
+
+    class Map(R):
+        value = link.value.to_int()
+        zero = link.zero.to_str()
+
+    assert Map.transform(target) == expect
+
+
 def test_item_list_field():
     target = {
         'fields': [
@@ -123,6 +134,55 @@ def test_item_field():
     assert Map.transform(target) == expect
 
 
+def test_iter_field():
+    target = {
+        'fields': [
+            {'type': 'int', 'val': '10'},
+            {'type': 'int', 'val': '1'},
+        ]
+    }
+    expect = {
+        'res': [
+            {'type': 'int', 'check': True},
+            {'type': 'int', 'check': False}
+        ],
+    }
+
+    class Map(R):
+        res = link.fields.iter_([
+            item.as_({
+                'type': item.type,
+                'check': item.val.to_(int) > 5,
+            })
+        ])
+    assert Map.transform(target) == expect
+
+
+def test_iter_field_with_filter():
+    target = {
+        'fields': [
+            {'type': 'int', 'val': '10'},
+            {'type': 'int', 'val': '1'},
+            {'type': 'str', 'val': 'ilove'},
+        ]
+    }
+    expect = {
+        'res': [
+            {'type': 'int', 'val': 10},
+            {'type': 'int', 'val': 1}
+        ],
+    }
+
+    class Map(R):
+        res = link.fields.iter_([
+            item.as_({
+                'type': item.type,
+                'val': item.val.to_(int),
+            })
+        ], item.type == 'int')
+    assert Map.transform(target) == expect
+
+
 def test_simple_list_field():
     target = {'list': ['Hello', 'world', '!!!']}
     expect = {
@@ -173,6 +233,17 @@ def test_simple_value_field_methods():
     assert Map.transform(target) == expect
 
 
+def test_simple_value_field_call():
+    target = {'name': 'test', 'val': 100, 'list': [1, 2, 3, 2]}
+    expect = {'name': 'tset', 'count': 3}
+
+    class Map(R):
+        name = link.name.call_(lambda name: ''.join(reversed(name)))
+        count = link.call_(lambda obj: len(obj))
+
+    assert Map.transform(target) == expect
+
+
 def test_simple_as_dict_field():
     target = {'key1': 'val1', 'key2': 'val2'}
     expect = {
@@ -219,17 +290,23 @@ def test_simple_with_many():
 
 
 def test_simple_with_object():
-    target = type('TestObject', (), {'name': 'Test', 'params': {'new': True, 'value': 122}})
+    target = type('TestObject', (), {
+        'name': 'Test',
+        'params': {'new': True, 'value': 122},
+        'get_reversed_name': lambda x: ''.join(reversed(x.name))})()
+    # target.get_reversed_name = lambda x: ''.join(reversed(x.name))
     expect = {
         'value': 1.22,
         'new': True,
         'name': 'Test',
+        'reversed_name': 'tseT',
     }
 
     class Map(R):
         value = link.params.value * 0.01
         new = link.params.new
         name = link.name
+        reversed_name = link.get_reversed_name()
 
     assert Map.transform(target) == expect
 
