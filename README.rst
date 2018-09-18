@@ -1,6 +1,6 @@
-====================================================================
-:ledger: Reformer
-====================================================================
+========
+Reformer
+========
 
 .. image:: https://travis-ci.org/Krukov/reformer.svg?branch=master
     :target: https://travis-ci.org/Krukov/reformer
@@ -10,9 +10,6 @@
 Simple and beautiful library for data formatting/convert/serialize
 ------------------------------------------------------------------
 
-
-Installation
-------------
 ::
 
     pip install reformer
