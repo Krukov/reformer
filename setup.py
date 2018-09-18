@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from setuptools import setup
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 setup(
     name='reformer',
@@ -12,7 +12,7 @@ setup(
     author='Dmitry Krukov',
     author_email='glebov.ru@gmail.com',
     description='The tool for creating notes',
-    long_description='',
+    long_description=open('README.rst').read(),
     keywords='reformat format transform serializer schema',
     classifiers=[
         'Development Status :: 4 - Beta',
