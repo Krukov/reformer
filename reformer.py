@@ -228,7 +228,6 @@ class _ReformerMeta(type):
                     attrs[ATTR_NAME].append(_name)
 
         attrs[ATTR_NAME].extend([key for key, value in attrs.items() if isinstance(value, _Target)])
-        attrs[ATTR_NAME] = list(set(attrs[ATTR_NAME]))
         return type.__new__(mcs, name, bases, attrs)
 
 
