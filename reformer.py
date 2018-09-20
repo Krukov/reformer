@@ -22,21 +22,24 @@ class _Target:
                 return value._get(obj)
         return value
 
-    @classmethod
-    def as_(cls, schema):
+    def as_(self, schema):
+        getter = self._getter
+
         def _getter(obj):
+            item = getter(obj)
             if isinstance(schema, dict):
                 res = OrderedDict()
                 for key, value in schema.items():
-                    res[cls.__get_value(key, obj)] = cls.__get_value(value, obj)
+                    res[self.__get_value(key, obj, item)] = self.__get_value(value, obj, item)
                 return res
             if isinstance(schema, (list, tuple)):
                 res = []
                 for value in schema:
-                    res.append(cls.__get_value(value, obj))
-                return res
+                    res.append(self.__get_value(value, obj, item))
+                return type(schema)(res)
             raise NotImplementedError
-        return cls(getter=_getter)
+        self._getter = _getter
+        return self
 
     def iter_(self, schema, condition=None):
         getter = self._getter
@@ -62,7 +65,7 @@ class _Target:
                     if condition and not self.__get_value(condition, obj, item):
                         continue
                     res.append(self.__get_value(_value, obj, item))
-                return res
+                return type(schema)(res)
 
         self._getter = _getter
         return self
@@ -236,11 +239,15 @@ class _Link:
     def __getattr__(self, item):
         return getattr(_Target(), item)
 
+    __getitem__ = __getattr__
+
 
 class _Item:
 
     def __getattr__(self, item):
         return getattr(_Target(), item).item_
+
+    __getitem__ = __getattr__
 
     def iter_(self, *args, **kwargs):
         return _Target().iter_(*args, **kwargs).item_
