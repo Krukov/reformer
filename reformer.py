@@ -26,7 +26,7 @@ class _Target:
     def as_(cls, schema):
         def _getter(obj):
             if isinstance(schema, dict):
-                res = {}
+                res = OrderedDict()
                 for key, value in schema.items():
                     res[cls.__get_value(key, obj)] = cls.__get_value(value, obj)
                 return res
@@ -47,7 +47,7 @@ class _Target:
                 obj = [{'key': k, 'value': v} for k, v in obj.items()]
 
             if isinstance(schema, dict):
-                res = {}
+                res = OrderedDict()
                 _key, _value = list(schema.items())[0]
                 for item in obj:
                     if condition and not self.__get_value(condition, obj, item):
