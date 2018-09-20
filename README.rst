@@ -16,9 +16,10 @@ Simple and beautiful library for data formatting/convert/serialize
 Why
 ---
 There are many great python libraries for serialization and data formatting search as marshmallow, DRF  etc.
-Also that tools base on data validation.
-    Using reformer you don't need to define fields types , just define fields mapping with operating
-a reference to target fields and use it as real object
+Usually they base on data validation.
+
+Using reformer you don't need to define fields types, just define fields mapping with operating a reference
+to target fields and use it as real object
 
 How to use
 ----------
