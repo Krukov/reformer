@@ -268,7 +268,10 @@ class Reformer(metaclass=_ReformerMeta):
             return [self._transform(item, blank=blank) for item in target]
         result = OrderedDict()
         for field in self._fields_:
-            result[field] = target[field]
+            if hasattr(target, field):
+                result[field] = getattr(target, field)
+            else:
+                result[field] = target[field]
         for attr in self.__fields__:
             if attr not in [TARGET_ALIAS]:
                 value = getattr(self, attr)._get(target)
