@@ -1,7 +1,7 @@
 import operator
 from collections import OrderedDict
 
-__all__ = ['Reformer', 'link', 'item']
+__all__ = ['Reformer', 'Field']
 ATTR_NAME = '__fields__'
 TARGET_ALIAS = 'target'
 
@@ -9,7 +9,8 @@ TARGET_ALIAS = 'target'
 class _Target:
 
     def __init__(self, getter=lambda obj: obj):
-        self._getter = getter
+        self._initial_getter = getter
+        self._getter = lambda obj: self._initial_getter(obj)
         self.__item = False
         self.__null = False
 
@@ -41,7 +42,9 @@ class _Target:
         self._getter = _getter
         return self
 
-    def iter_(self, schema, condition=None):
+    in_form = as_
+
+    def iter(self, schema, condition=None):
         getter = self._getter
 
         def _getter(obj):
@@ -70,33 +73,33 @@ class _Target:
         self._getter = _getter
         return self
 
-    def compare_(self, item, operator=operator.eq):
+    def compare(self, item, operator=operator.eq):
         getter = self._getter
         self._getter = lambda obj: operator(getter(obj), self.__get_value(item, obj))
         return self
 
-    def in_(self, container):
+    def at(self, container):
         getter = self._getter
         self._getter = lambda obj: (getter(obj) in container)
         return self
 
-    def contains_(self, item):
+    def contains(self, item):
         getter = self._getter
         self._getter = lambda obj: (item in getter(obj))
         return self
 
-    def to_(self, type):
+    def to(self, type):
         getter = self._getter
         self._getter = lambda obj: type(getter(obj))
         return self
 
     def to_str(self):
-        return self.to_(str)
+        return self.to(str)
 
     def to_int(self):
-        return self.to_(int)
+        return self.to(int)
 
-    def choice_(self, choices, default=None):
+    def map(self, choices, default=None):
         getter = self._getter
 
         def _getter(obj):
@@ -112,7 +115,7 @@ class _Target:
         self._getter = _getter
         return self
 
-    def call_(self, function):
+    def call(self, function):
         getter = self._getter
 
         def _getter(obj):
@@ -122,14 +125,14 @@ class _Target:
         self._getter = _getter
         return self
 
-    @property
-    def null_(self):
+    handle = call
+
+    def set_null(self):
         self.__null = True
         return self
 
-    @property
-    def item_(self):
-        self.__item = True
+    def set_as_item(self, value=True):
+        self.__item = value
         return self
 
     def __getattr__(self, item):
@@ -143,6 +146,8 @@ class _Target:
         self._getter = _getter
         return self
 
+    __getitem__ = __getattr__
+
     def __call__(self, *args, **kwargs):
         getter = self._getter
 
@@ -153,8 +158,6 @@ class _Target:
             return getter(obj)(*_args, **_kw)
         self._getter = _getter
         return self
-
-    __getitem__ = __getattr__
 
     def __iter__(self):
         raise NotImplementedError
@@ -192,19 +195,19 @@ class _Target:
         return self
 
     def __eq__(self, other):
-        return self.compare_(other)
+        return self.compare(other)
 
     def __gt__(self, other):
-        return self.compare_(other, operator.gt)
+        return self.compare(other, operator.gt)
 
     def __ge__(self, other):
-        return self.compare_(other, operator.ge)
+        return self.compare(other, operator.ge)
 
     def __lt__(self, other):
-        return self.compare_(other, operator.lt)
+        return self.compare(other, operator.lt)
 
     def __le__(self, other):
-        return self.compare_(other, operator.le)
+        return self.compare(other, operator.le)
 
     def __hash__(self):
         return hash(self._getter)
@@ -229,8 +232,16 @@ class _ReformerMeta(type):
             for _name in getattr(base, ATTR_NAME, []):
                 if _name not in attrs:
                     attrs[ATTR_NAME].append(_name)
-
-        attrs[ATTR_NAME].extend([key for key, value in attrs.items() if isinstance(value, _Target)])
+        if '_fields_' in attrs:
+            for name in attrs['_fields_']:
+                attrs[name] = Field(name)
+        for key, value in attrs.items():
+            if isinstance(value, _Target):
+                if isinstance(value, Field):
+                    value.set_as_item(False)
+                    if value._source is None:
+                        value._source = key
+                attrs[ATTR_NAME].append(key)
         return type.__new__(mcs, name, bases, attrs)
 
 
@@ -245,19 +256,44 @@ class _Link:
 class _Item:
 
     def __getattr__(self, item):
-        return getattr(_Target(), item).item_
+        return getattr(_Target(), item).set_as_item()
 
     __getitem__ = __getattr__
 
-    def iter_(self, *args, **kwargs):
-        return _Target().iter_(*args, **kwargs).item_
+    def iter(self, *args, **kwargs):
+        return _Target().iter(*args, **kwargs).set_as_item()
 
     def as_(self, *args, **kwargs):
-        return _Target().as_(*args, **kwargs).item_
+        return _Target().as_(*args, **kwargs).set_as_item()
 
 
-link = _Link()
-item = _Item()
+class Field(_Target):
+
+    def __init__(self, source=None, schema=None, to=None,
+                 handler=None, choices=None, required=True):
+        self._source = source
+
+        def initial_getter(obj):
+            result = obj
+            for _source in self._source.split('.'):
+                if _source in ['self']:
+                    continue
+                if hasattr(result, _source):
+                    result = getattr(result, _source)
+                result = result[_source]
+            return result
+        super().__init__(getter=initial_getter)
+        self.set_as_item()
+        if not required:
+            self.set_null()
+        if to is not None:
+            self.to(to)
+        if handler is not None:
+            self.handle(handler)
+        if schema is not None:
+            self.as_(schema=schema)
+        if choices is not None:
+            self.map(choices)
 
 
 class Reformer(metaclass=_ReformerMeta):
@@ -267,18 +303,10 @@ class Reformer(metaclass=_ReformerMeta):
     def transform(cls, _target, **kwargs):
         return cls()._transform(_target, **kwargs)
 
-    link = link
-    item = item
-
     def _transform(self, target, many=False, blank=True):
         if many:
             return [self._transform(item, blank=blank) for item in target]
         result = OrderedDict()
-        for field in self._fields_:
-            if hasattr(target, field):
-                result[field] = getattr(target, field)
-            else:
-                result[field] = target[field]
         for attr in self.__fields__:
             if attr not in [TARGET_ALIAS]:
                 value = getattr(self, attr)._get(target)

@@ -24,17 +24,14 @@ to target fields and use it as real object
 How to use
 ----------
 To define schema you need to create Reformer base class.
-The main abstraction of the reformer is a `link`.  It represent access to the target object.
-You can manipulate fields as you would do it with a real object, except a few operations that
-have alias in `link` object. This methods are: `iter_`, `in_`, `contains_`, `to_`, `choice_`,
-`call_`::
+The main abstraction of the reformer is a `Field`.::
 
-    from reformer import Reformer, link
+    from reformer import Reformer, Field
 
     class Schema(Reformer):
-        fullname = link.name.replace('_', '-')  + ' ' + link.surname
-        admin = link.username.in_(['admin', 'root'])
-        welcome = link.username.choice_(
+        fullname = Field('name').replace('_', '-')  + ' ' + Field('surname')
+        admin = Field('username').at(['admin', 'root'])
+        welcome = Field('username', choices=
             {'admin': 'Hi bro', 'root': 'God?'},
             default='who are you?'
         )
@@ -54,7 +51,7 @@ have alias in `link` object. This methods are: `iter_`, `in_`, `contains_`, `to_
     from reformer import Reformer, link, item
 
     class Schema(Reformer):
-        posts_titles = link.posts.iter_([item.title])
+        posts_titles = Field('posts').iter_([Field('title')])
 
 
     class Author:

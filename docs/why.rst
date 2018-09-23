@@ -2,9 +2,10 @@ Why reformer
 ============
 
 There are many great python libraries for serialization and data formatting search as marshmallow, DRF  etc.
-Also that tools base on data validation.
-    Using reformer you don't need to define fields types. You just need to define fields mapping with operating
-a reference to an target fields and use it as real object. For example you have the class and an instance::
+Usually they base on data validation.
+
+Using reformer you don't need to define fields types, just define fields mapping with operating a reference
+to target fields and use it as real object. For example you have the class and an instance::
 
    class Voter:
        def __init__(self, id, name, country, polls):
@@ -65,11 +66,11 @@ And the same serialization with Reformer::
     class AuthorReformer(Reformer):
         _fields_ = 'name',
 
-        fullname = link.name + ' ' + link.surname
-        posts = link.posts.all().iter_([
-            item.as_(OrderedDict((
+        fullname = Field('name') + ' ' + Field('usurname')
+        posts = Field('posts').all().iter([
+            Field('self', schema=OrderedDict((
                 ('name', item.title),
                 ('created', item.created.isoformat()),
                 ('updated', item.created == item.updated)
-            )))
+            ))
         ])
