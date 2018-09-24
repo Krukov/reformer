@@ -31,10 +31,10 @@ The main abstraction of the reformer is a `Field`.::
     class Schema(Reformer):
         fullname = Field('name').replace('_', '-')  + ' ' + Field('surname')
         admin = Field('username').at(['admin', 'root'])
-        welcome = Field('username', choices=
-            {'admin': 'Hi bro', 'root': 'God?'},
-            default='who are you?'
-        )
+        welcome = Field('username', choices={
+            'admin': 'Hi bro',
+             'root': 'God?'
+        })
 
     target = {
         'name': 'John',
@@ -51,7 +51,7 @@ The main abstraction of the reformer is a `Field`.::
     from reformer import Reformer, link, item
 
     class Schema(Reformer):
-        posts_titles = Field('posts').iter_([Field('title')])
+        posts_titles = Field('posts').iter([Field('title')])
 
 
     class Author:

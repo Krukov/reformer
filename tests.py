@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import pytest
 
-from reformer import Reformer as R, _Item, _Link, Field
+from reformer import Reformer as R, _Item, _Link, Field, MethodField
 
 link = _Link()
 item = _Item()
@@ -558,11 +558,10 @@ def test_field_item_link():
     }
 
     class Map(R):
-        res = Field('fields').iter([
-            Field('self').iter({
-                Field('value'): Field('key')
-            })
-        ])
+        res = Field('fields').iter({
+            Field('type'): 'type',
+            Field('value'): 'value',
+        })
     assert Map.transform(target) == expect
 
 
@@ -581,9 +580,35 @@ def test_field_item_link2():
     }
 
     class Map(R):
-        res = Field('fields').iter([
-            Field('self', schema={
-                'value': Field('value').to(Field('type')),
-            })
-        ])
+        res = Field('fields').iter({
+            'value': Field('value').to(Field('type')),
+        })
     assert Map.transform(target) == expect
+
+
+def test_field_item_link3():
+    target = {
+        'fields': [
+            {'type': 'int', 'value': '10'},
+            {'type': 'int', 'value': '1'},
+        ]
+    }
+    expect = {'res': ['10', '1']}
+
+    class Map(R):
+        res = Field('fields').iter([Field('value')])
+
+    assert Map.transform(target) == expect
+
+
+def test_method_field():
+    target = {'type': 'int', 'value': '1'}
+    expect = {'hash': 'int1'}
+
+    class Map(R):
+        hash = MethodField()
+
+        def get_hash(self, obj):
+            return ''.join(obj.values())
+
+    assert Map.transform(target)['hash'] == expect['hash']

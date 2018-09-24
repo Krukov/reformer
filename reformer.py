@@ -239,6 +239,7 @@ class _ReformerMeta(type):
             if isinstance(value, _Target):
                 if isinstance(value, Field):
                     value.set_as_item(False)
+                    value._name = key
                     if value._source is None:
                         value._source = key
                 attrs[ATTR_NAME].append(key)
@@ -271,6 +272,7 @@ class Field(_Target):
 
     def __init__(self, source=None, schema=None, to=None,
                  handler=None, choices=None, required=True):
+        self._name = None
         self._source = source
 
         def initial_getter(obj):
@@ -294,6 +296,54 @@ class Field(_Target):
             self.as_(schema=schema)
         if choices is not None:
             self.map(choices)
+
+    def iter(self, schema, condition=None):
+        if isinstance(schema, (list, tuple)):
+            return super().iter(schema, condition=condition)
+        return super().iter([Field('self', schema=schema), ], condition=condition)
+
+
+class MapField(Field):
+
+    def __init__(self, source, choices):
+        super().__init__(source, choices=choices)
+        if choices is not None:
+            self.map(choices)
+
+
+class SchemaField(Field):
+
+    def __init__(self, source, schema):
+        super().__init__(source, schema=schema)
+
+
+class TypeField(Field):
+    def __init__(self, source, to):
+        super().__init__(source, to=to)
+
+
+class HandleField(Field):
+
+    def __init__(self, source, handler):
+        super().__init__(source, handler=handler)
+
+
+class MethodField(Field):
+
+    def __init__(self):
+        self.__instance = None
+        super().__init__('self', handler=self.__handler)
+
+    def __handler(self, obj):
+        method_name = 'get_' + self._name
+        method = getattr(self.__instance, method_name)
+        return method(obj)
+
+    def __get__(self, instance, owner):
+        if owner is None:
+            return self
+        self.__instance = instance
+        return self
 
 
 class Reformer(metaclass=_ReformerMeta):
