@@ -298,9 +298,19 @@ class Field(_Target):
             self.map(choices)
 
     def iter(self, schema, condition=None):
-        if isinstance(schema, (list, tuple)):
-            return super().iter(schema, condition=condition)
-        return super().iter([Field('self', schema=schema), ], condition=condition)
+        if isinstance(schema, set):
+            _schema = {}
+            for source in schema:
+                if isinstance(source, _Target):
+                    _schema[source._source] = source
+                else:
+                    _schema[source] = Field(source)
+            schema = [_schema]
+        elif isinstance(schema, dict):
+            schema = [Field('self', schema=schema)]
+        elif isinstance(schema, (list, tuple)):
+            schema = [source if isinstance(source, _Target) else Field(source) for source in schema]
+        return super().iter(schema, condition=condition)
 
 
 class MapField(Field):
@@ -318,6 +328,7 @@ class SchemaField(Field):
 
 
 class TypeField(Field):
+
     def __init__(self, source, to):
         super().__init__(source, to=to)
 
@@ -330,12 +341,13 @@ class HandleField(Field):
 
 class MethodField(Field):
 
-    def __init__(self):
+    def __init__(self, source=None):
+        self._method_source = source
         self.__instance = None
         super().__init__('self', handler=self.__handler)
 
     def __handler(self, obj):
-        method_name = 'get_' + self._name
+        method_name = self._method_source or'get_' + self._name
         method = getattr(self.__instance, method_name)
         return method(obj)
 

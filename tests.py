@@ -481,6 +481,16 @@ def test_field_mul():
     assert Map.transform(target) == expect
 
 
+def test_field_con():
+    target = {'val': 10}
+    expect = {'res': ['api.com', 'user', '10']}
+
+    class Map(R):
+        res = ('api.com/user/' + Field('val', to=str)).split('/')
+
+    assert Map.transform(target) == expect
+
+
 def test_fields_compare():
     target = {'one': 1, 'two': 2}
     expect = {'one_two': False, 'one_is_one': True, 'one_more_two': False}
@@ -596,7 +606,32 @@ def test_field_item_link3():
     expect = {'res': ['10', '1']}
 
     class Map(R):
-        res = Field('fields').iter([Field('value')])
+        res = Field('fields').iter(['value'])
+
+    assert Map.transform(target) == expect
+
+
+def test_field_item_link4():
+    target = {
+        'fields': [
+            {'type': 'int', 'value': '10.1', 'name': 'x'},
+            {'type': 'int', 'value': '1', 'name': 'z'},
+        ]
+    }
+    expect = {
+        'res': [
+            {'value': '10.1', 'name': 'x'},
+            {'value': '1', 'name': 'z'},
+        ],
+        'res2': [
+            {'value': 10.1, 'type': 'int'},
+            {'value': 1.0, 'type': 'int'},
+        ]
+    }
+
+    class Map(R):
+        res = Field('fields').iter({'value', 'name'})
+        res2 = Field('fields').iter({Field('value', to=float), 'type'})
 
     assert Map.transform(target) == expect
 
