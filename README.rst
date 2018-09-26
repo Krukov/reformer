@@ -15,59 +15,50 @@ Simple and beautiful library for data formatting/convert/serialize
 
 Why
 ---
-There are many great python libraries for serialization and data formatting search as marshmallow, DRF  etc.
+There are many great python libraries for validation, serialization and data formatting search as marshmallow, DRF  etc.
 Usually they base on data validation.
 
-Using reformer you don't need to define fields types, just define fields mapping with operating a reference
-to target fields and use it as real object
+Otherwise reformer design only for data formatting, and in a schema you need to define type of transformation and data source.
 
 How to use
 ----------
-To define schema you need to create Reformer base class.
-The main abstraction of the reformer is a `link`.  It represent access to the target object.
-You can manipulate fields as you would do it with a real object, except a few operations that
-have alias in `link` object. This methods are: `iter_`, `in_`, `contains_`, `to_`, `choice_`,
-`call_`::
+To define schema you need to create Reformer base class::
 
-    from reformer import Reformer, link
+    from reformer import Reformer, Field, MapField, MethodField
 
     class Schema(Reformer):
-        fullname = link.name.replace('_', '-')  + ' ' + link.surname
-        admin = link.username.in_(['admin', 'root'])
-        welcome = link.username.choice_(
-            {'admin': 'Hi bro', 'root': 'God?'},
-            default='who are you?'
-        )
+        _fields_ = ('name', 'surname')
+        fullname = Field('name').replace('_', '-')  + ' ' + Field('surname')
+        admin = Field('username').at(['admin', 'root'])
+        welcome = MapField('username', {
+            'admin': 'Hi bro',
+            'root':  'God?'
+        })
+        posts_titles = Field('posts').iter(['title'])
+        status = ('http://api.com/get_user_status/' + Field('id', to=str)).handle(requests.get)
+
 
     target = {
+        'id': 353,
         'name': 'John',
         'surname': 'Black',
         'username': 'admin',
+        'posts': [
+            {'title': 'New', 'id': 10},
+            {'title': 'My first post', 'id': 11},
+        ]
     }
 
     print(Schema.transform(target))
-    # OrderedDict([('fullname', 'John Black'), ('admin', True), ('welcome', 'Hi bro')])
-
-
-`item` - another child abstraction as `link`, but for item of iterated object::
-
-    from reformer import Reformer, link, item
-
-    class Schema(Reformer):
-        posts_titles = link.posts.iter_([item.title])
-
-
-    class Author:
-        @property
-        def posts(self):
-            return [
-                {'title': 'New', 'id': 10},
-                {'title': 'My first post', 'id': 11},
-            ]
-
-
-    print(Schema.transform(Author()))
-    # OrderedDict([('posts_titles', ['New', 'My first post'])])
+    # OrderedDict([
+    #    ('name', 'John'),
+    #    ('surname', 'Black'),
+    #    ('fullname', 'John Black'),
+    #    ('admin', True),
+    #    ('welcome', 'Hi bro'),
+    #    ('posts_titles', ['New', 'My first post']),
+    #    ('status', 'INIT'),
+    # ])
 
 
 *FUTURE*
