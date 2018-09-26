@@ -644,6 +644,6 @@ def test_method_field():
         hash = MethodField()
 
         def get_hash(self, obj):
-            return ''.join(obj.values())
+            return ''.join([obj['type'], obj['value']])
 
     assert Map.transform(target)['hash'] == expect['hash']
