@@ -13,6 +13,7 @@ class _Target:
         self._getter = lambda obj: self._initial_getter(obj)
         self.__item = False
         self.__null = False
+        self.__default = None
 
     @staticmethod
     def __get_value(value, obj, item=None):
@@ -131,6 +132,10 @@ class _Target:
         self.__null = True
         return self
 
+    def set_default(self, value):
+        self.__default = value
+        return self
+
     def set_as_item(self, value=True):
         self.__item = value
         return self
@@ -216,8 +221,8 @@ class _Target:
         try:
             return self._getter(obj)
         except (KeyError, AttributeError, TypeError):
-            if self.__null:
-                return
+            if self.__null or self.__default is not None:
+                return self.__default
             raise
 
 
@@ -232,9 +237,11 @@ class _ReformerMeta(type):
             for _name in getattr(base, ATTR_NAME, []):
                 if _name not in attrs:
                     attrs[ATTR_NAME].append(_name)
+
         if '_fields_' in attrs:
             for name in attrs['_fields_']:
                 attrs[name] = Field(name)
+                attrs[ATTR_NAME].append(name)
         for key, value in attrs.items():
             if isinstance(value, _Target):
                 if isinstance(value, Field):
@@ -242,7 +249,8 @@ class _ReformerMeta(type):
                     value._name = key
                     if value._source is None:
                         value._source = key
-                attrs[ATTR_NAME].append(key)
+                if key not in attrs[ATTR_NAME]:
+                    attrs[ATTR_NAME].append(key)
         return type.__new__(mcs, name, bases, attrs)
 
 
@@ -271,7 +279,7 @@ class _Item:
 class Field(_Target):
 
     def __init__(self, source=None, schema=None, to=None,
-                 handler=None, choices=None, required=True):
+                 handler=None, choices=None, required=True, default=None):
         self._name = None
         self._source = source
 
@@ -282,12 +290,15 @@ class Field(_Target):
                     continue
                 if hasattr(result, _source):
                     result = getattr(result, _source)
-                result = result[_source]
+                else:
+                    result = result[_source]
             return result
         super().__init__(getter=initial_getter)
         self.set_as_item()
+        self.set_default(default)
         if not required:
             self.set_null()
+
         if to is not None:
             self.to(to)
         if handler is not None:
@@ -295,7 +306,7 @@ class Field(_Target):
         if schema is not None:
             self.as_(schema=schema)
         if choices is not None:
-            self.map(choices)
+            self.map(choices, default=default)
 
     def iter(self, schema, condition=None):
         if isinstance(schema, set):
