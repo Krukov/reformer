@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from setuptools import setup
-VERSION = '0.1.1'
+VERSION = '0.1.3'
 
 setup(
     name='reformer',
