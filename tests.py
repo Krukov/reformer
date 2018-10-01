@@ -568,10 +568,10 @@ def test_field_item_link():
     }
 
     class Map(R):
-        res = Field('fields').iter({
+        res = Field('fields').iter([{
             Field('type'): 'type',
             Field('value'): 'value',
-        })
+        }])
     assert Map.transform(target) == expect
 
 
@@ -590,9 +590,9 @@ def test_field_item_link2():
     }
 
     class Map(R):
-        res = Field('fields').iter({
+        res = Field('fields').iter([{
             'value': Field('value').to(Field('type')),
-        })
+        }])
     assert Map.transform(target) == expect
 
 
@@ -647,3 +647,18 @@ def test_method_field():
             return ''.join([obj['type'], obj['value']])
 
     assert Map.transform(target)['hash'] == expect['hash']
+
+
+def test_field_sub_map():
+    target = {'key': {'key2': 'val2', 'key': 'name'}}
+    expect = {
+        'test': {'name': 'val2'},
+    }
+
+    class SubMap(R):
+        name = Field('key2')
+
+    class Map(R):
+        test = Field('key').as_(SubMap())
+
+    assert Map.transform(target) == expect

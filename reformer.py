@@ -10,18 +10,25 @@ class _Target:
 
     def __init__(self, getter=lambda obj: obj):
         self._initial_getter = getter
-        self._getter = lambda obj: self._initial_getter(obj)
+        self._getter = self._initial_getter
         self.__item = False
         self.__null = False
         self.__default = None
 
-    @staticmethod
-    def __get_value(value, obj, item=None):
+    def __get_value(self, value, obj, item=None):
         if isinstance(value, _Target):
             if item is not None and value.__item:
                 return value._get(item)
             else:
                 return value._get(obj)
+        if isinstance(value, dict):
+            res = OrderedDict()
+            for key, value in value.items():
+                res[self.__get_value(key, obj, item)] = self.__get_value(value, obj, item)
+            return res
+        if isinstance(value, Reformer):
+            value.content['parent'] = obj
+            return value._transform(item or obj)
         return value
 
     def as_(self, schema):
@@ -39,7 +46,7 @@ class _Target:
                 for value in schema:
                     res.append(self.__get_value(value, obj, item))
                 return type(schema)(res)
-            raise NotImplementedError
+            return self.__get_value(schema, obj, item)
         self._getter = _getter
         return self
 
@@ -317,10 +324,16 @@ class Field(_Target):
                 else:
                     _schema[source] = Field(source)
             schema = [_schema]
-        elif isinstance(schema, dict):
-            schema = [Field('self', schema=schema)]
         elif isinstance(schema, (list, tuple)):
-            schema = [source if isinstance(source, _Target) else Field(source) for source in schema]
+            _schema = []
+            for source in schema:
+                if isinstance(source, _Target):
+                    _schema.append(source)
+                elif isinstance(source, dict):
+                    _schema.append(Field('self', schema=source))
+                else:
+                    _schema.append(Field(source))
+            schema = _schema
         return super().iter(schema, condition=condition)
 
 
@@ -372,21 +385,27 @@ class MethodField(Field):
 class Reformer(metaclass=_ReformerMeta):
     _fields_ = ()
 
+    def __init__(self, many=False, blank=True, content=None):
+        self.content = content or {}
+        self._blank = blank
+        self._many = many
+
     @classmethod
     def transform(cls, _target, **kwargs):
-        return cls()._transform(_target, **kwargs)
+        return cls(**kwargs)._transform(_target)
 
-    def _transform(self, target, many=False, blank=True):
-        if many:
-            return [self._transform(item, blank=blank) for item in target]
+    def _transform(self, target):
+        if self._many:
+            self._many = False
+            return [self._transform(item) for item in target]
         result = OrderedDict()
         for attr in self.__fields__:
             if attr not in [TARGET_ALIAS]:
                 value = getattr(self, attr)._get(target)
                 if value is None:
-                    if blank and blank is not True:
-                        result[attr] = blank
-                    elif blank:
+                    if self._blank and self._blank is not True:
+                        result[attr] = self._blank
+                    elif self._blank:
                         result[attr] = None
                 else:
                     result[attr] = value

@@ -39,7 +39,7 @@ Reformer is available on PyPI - to install it, just run::
 
    why
    usage
-   link_methods
+   api
 
 
 Indices and tables
