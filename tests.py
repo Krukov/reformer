@@ -3,10 +3,7 @@ from collections import OrderedDict
 
 import pytest
 
-from reformer import Reformer as R, _Item, _Link, Field, MethodField
-
-link = _Link()
-item = _Item()
+from reformer import Reformer as R, Field, MethodField
 
 
 def test_simple_value_link():
@@ -14,7 +11,7 @@ def test_simple_value_link():
     expect = {'test': 'test'}
 
     class Map(R):
-        test = link.name
+        test = Field("name")
 
     assert Map.transform(target) == expect
 
@@ -24,8 +21,8 @@ def test_simple_int_link():
     expect = {'test': 10, 'zero': 0}
 
     class Map(R):
-        test = link.value
-        zero = link.zero
+        test = Field("value")
+        zero = Field()
 
     assert Map.transform(target) == expect
 
@@ -35,8 +32,8 @@ def test_simple_bool_link():
     expect = {'test_t': True, 'test_f': False}
 
     class Map(R):
-        test_t = link.true
-        test_f = link.false
+        test_t = Field("true")
+        test_f = Field("false")
 
     assert Map.transform(target) == expect
 
@@ -49,8 +46,8 @@ def test_simple_dict_link():
     }
 
     class Map(R):
-        test = link.dict
-        value = link.dict.key
+        test = Field("dict")
+        value = Field("dict") .key
 
     assert Map.transform(target) == expect
 
@@ -60,8 +57,8 @@ def test_to_type():
     expect = {'value': 10, 'zero': '0'}
 
     class Map(R):
-        value = link.value.to_int()
-        zero = link.zero.to_str()
+        value = Field("value") .to_int()
+        zero = Field("zero") .to_str()
 
     assert Map.transform(target) == expect
 
@@ -82,11 +79,11 @@ def test_item_list_link():
     }
 
     class Map(R):
-        res = link.fields.iter({
-            item.type: item.N
+        res = Field("fields") .iter({
+            Field("type"): Field("N")
         })
-        res_ = link.fields.iter([
-            item.N
+        res_ = Field("fields") .iter([
+            Field("N")
         ])
     assert Map.transform(target) == expect
 
@@ -101,11 +98,11 @@ def test_item_dict_link():
     }
 
     class Map(R):
-        res = link.fields.iter({
-            item.value: item.key
+        res = Field("fields") .iter({
+            Field("value"): Field("key")
         })
-        res_ = link.fields.iter([
-            item.value
+        res_ = Field("fields") .iter([
+            Field("value")
         ])
     assert Map.transform(target) == expect
 
@@ -126,14 +123,13 @@ def test_item_link():
     }
 
     class Map(R):
-        res = link.fields.iter([
-            item.value.to(int)
+        res = Field("fields").iter([
+            Field("value").to(int)
         ])
-        res_ = link.fields.iter([
-            item.iter({
-                item.value: item.key
-            })
-        ])
+        res_ = Field("fields").iter([{
+            Field('type'): 'type',
+            Field('value'): 'value',
+        }])
     assert Map.transform(target) == expect
 
 
@@ -152,10 +148,10 @@ def test_iter_link():
     }
 
     class Map(R):
-        res = link.fields.iter([
-            item.as_({
-                'type': item.type,
-                'check': item.val.to(int) > 5,
+        res = Field("fields").iter([
+            Field("self").as_({
+                'type': Field("type"),
+                'check': Field("val").to(int) > 5,
             })
         ])
     assert Map.transform(target) == expect
@@ -177,12 +173,12 @@ def test_iter_field_with_filter():
     }
 
     class Map(R):
-        res = link.fields.iter([
-            item.as_({
-                'type': item.type,
-                'val': item.val.to(int),
+        res = Field("fields").iter([
+            Field("self").as_({
+                'type': Field("type"),
+                'val': Field("val").to(int),
             })
-        ], item.type == 'int')
+        ], Field("type") == 'int')
     assert Map.transform(target) == expect
 
 
@@ -195,9 +191,9 @@ def test_simple_list_link():
     }
 
     class Map(R):
-        all = link.list
-        res = link.list[0]
-        last = link.list[-1]
+        all = Field("list")
+        res = Field("list")[0]
+        last = Field("list")[-1]
 
     assert Map.transform(target) == expect
 
@@ -207,8 +203,8 @@ def test_simple_value_field_mul():
     expect = {'test': 'testtesttest', 'val': 20}
 
     class Map(R):
-        test = link.name * 3
-        val = link.val * 2
+        test = Field("name") * 3
+        val = Field("val") * 2
 
     assert Map.transform(target) == expect
 
@@ -218,8 +214,8 @@ def test_simple_value_field_add():
     expect = {'test': '* test_10', 'val': 15}
 
     class Map(R):
-        test = '* ' + link.name + '_' + link.val.to_str()
-        val = 5 + link.val
+        test = '* ' + Field("name") + '_' + Field("val") .to_str()
+        val = 5 + Field("val")
 
     assert Map.transform(target) == expect
 
@@ -229,9 +225,9 @@ def test_simple_value_field_methods():
     expect = {'name': '*es*', 'val': 7, 'i': 2}
 
     class Map(R):
-        name = link.name.replace('t', '*')
-        val = link.val.bit_length()
-        i = link.list.count(2)
+        name = Field().replace('t', '*')
+        val = Field().bit_length()
+        i = Field("list").count(2)
 
     assert Map.transform(target) == expect
 
@@ -241,8 +237,8 @@ def test_simple_value_field_call():
     expect = {'name': 'tset', 'count': 3}
 
     class Map(R):
-        name = link.name.call(lambda name: ''.join(reversed(name)))
-        count = link.call(lambda obj: len(obj))
+        name = Field("name").call(lambda name: ''.join(reversed(name)))
+        count = Field("self").call(lambda obj: len(obj))
 
     assert Map.transform(target) == expect
 
@@ -254,9 +250,9 @@ def test_simple_as_dict_link():
     }
 
     class Map(R):
-        test = link.as_({
-            'key2': link.key1,
-            'key1': link.key2,
+        test = Field("self").as_({
+            'key2': Field("key1"),
+            'key1': Field("key2"),
         })
 
     assert Map.transform(target) == expect
@@ -269,8 +265,8 @@ def test_simple_as_list_link():
     }
 
     class Map(R):
-        test = link.as_([
-            link.key1, link.key2,
+        test = Field("self").as_([
+            Field("key1"), Field("key2"),
         ])
 
     assert Map.transform(target) == expect
@@ -287,7 +283,7 @@ def test_simple_with_many():
     ]
 
     class Map(R):
-        alias = link.name + ' ' + link.gender.upper()
+        alias = Field("name") + ' ' + Field("gender").upper()
 
     assert Map.transform(targets, many=True) == expect
 
@@ -306,10 +302,10 @@ def test_simple_with_object():
     }
 
     class Map(R):
-        value = link.params.value * 0.01
-        new = link.params.new
-        name = link.name
-        reversed_name = link.get_reversed_name()
+        value = Field("params").value * 0.01
+        new = Field("params").new
+        name = Field()
+        reversed_name = Field("get_reversed_name")()
 
     assert Map.transform(target) == expect
 
@@ -319,9 +315,9 @@ def test_nullable_fields():
     expect = {'alias': 'test', 'test': None, 'empty': None}
 
     class Map(R):
-        alias = link.name
-        test = link.test.set_null()
-        empty = link.empty
+        alias = Field("name")
+        test = Field("test").set_null()
+        empty = Field("empty")
 
     assert Map.transform(target, blank=True) == expect
     assert Map.transform(target, blank=False) == {'alias': 'test'}
@@ -331,8 +327,8 @@ def test_exception_at_wrong_link():
     target = {'name': 'test', 'gender': 'm', 'empty': None}
 
     class Map(R):
-        test = link.test
-        empty = link.empty
+        test = Field()
+        empty = Field()
 
     with pytest.raises(KeyError):
         Map.transform(target)
@@ -343,8 +339,8 @@ def test_choice_fields():
     expect = {'alias': 'str', 'g': 'Woman'}
 
     class Map(R):
-        alias = link.type.map(['str', 'bool', 'int'])
-        g = link.gender.map({'m': 'Man', 'w': 'Woman'})
+        alias = Field("type").map(['str', 'bool', 'int'])
+        g = Field("gender").map({'m': 'Man', 'w': 'Woman'})
 
     assert Map.transform(target) == expect
 
@@ -354,8 +350,8 @@ def test_in_fields():
     expect = {'woman': True, 'check': False}
 
     class Map(R):
-        woman = link.gender.at(['w', 'woman'])
-        check = link.gender.contains('t')
+        woman = Field("gender").at(['w', 'woman'])
+        check = Field("gender").contains('t')
 
     assert Map.transform(target) == expect
 
@@ -365,8 +361,8 @@ def test_slice_fields():
     expect = {'list': [3, 4], 'text': 'here'}
 
     class Map(R):
-        list = link.list[3:5]
-        text = link.text[-4:]
+        list = Field("list")[3:5]
+        text = Field("text")[-4:]
 
     assert Map.transform(target) == expect
 
@@ -377,9 +373,9 @@ def test_compare():
     expect = {'one_two': False, 'one_is_one': True, 'one_more_two': False}
 
     class Map(R):
-        one_two = link.one.compare(link.two)
-        one_is_one = link.one.compare(1)
-        one_more_two = link.one.compare(link.two, gt)
+        one_two = Field("one") .compare(Field("two"))
+        one_is_one = Field("one") .compare(1)
+        one_more_two = Field("one") .compare(Field("two"), gt)
 
     assert Map.transform(target) == expect
 
@@ -389,9 +385,9 @@ def test_compare_2():
     expect = {'one_two': False, 'one_is_one': True, 'one_more_two': False}
 
     class Map(R):
-        one_two = link.one == link.two
-        one_is_one = link.one == 1
-        one_more_two = link.one >= link.two
+        one_two = Field("one") == Field("two")
+        one_is_one = Field("one") == 1
+        one_more_two = Field("one") >= Field("two")
 
     assert Map.transform(target) == expect
 
@@ -402,7 +398,7 @@ def test_default_fields():
 
     class Map(R):
         _fields_ = 'a', 'c'
-        o = link.b
+        o = Field("b")
 
     assert Map.transform(target) == expect
 
@@ -579,13 +575,13 @@ def test_field_item_link2():
     target = {
         'fields': [
             {'type': 'int', 'value': '10'},
-            {'type': 'int', 'value': '1'},
+            {'type': 'str', 'value': '1'},
         ]
     }
     expect = {
         'res': [
             {'value': 10},
-            {'value': 1},
+            {'value': "1"},
         ],
     }
 

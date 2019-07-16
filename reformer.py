@@ -1,9 +1,7 @@
 import operator
 from collections import OrderedDict
 
-__all__ = ['Reformer', 'Field']
 ATTR_NAME = '__fields__'
-TARGET_ALIAS = 'target'
 
 
 class _Target:
@@ -261,26 +259,6 @@ class _ReformerMeta(type):
         return type.__new__(mcs, name, bases, attrs)
 
 
-class _Link:
-
-    def __getattr__(self, item):
-        return getattr(_Target(), item)
-
-    __getitem__ = __getattr__
-
-
-class _Item:
-
-    def __getattr__(self, item):
-        return getattr(_Target(), item).set_as_item()
-
-    __getitem__ = __getattr__
-
-    def iter(self, *args, **kwargs):
-        return _Target().iter(*args, **kwargs).set_as_item()
-
-    def as_(self, *args, **kwargs):
-        return _Target().as_(*args, **kwargs).set_as_item()
 
 
 class Field(_Target):
@@ -400,15 +378,14 @@ class Reformer(metaclass=_ReformerMeta):
             return [self._transform(item) for item in target]
         result = OrderedDict()
         for attr in self.__fields__:
-            if attr not in [TARGET_ALIAS]:
-                value = getattr(self, attr)._get(target)
-                if value is None:
-                    if self._blank and self._blank is not True:
-                        result[attr] = self._blank
-                    elif self._blank:
-                        result[attr] = None
-                else:
-                    result[attr] = value
+            value = getattr(self, attr)._get(target)
+            if value is None:
+                if self._blank and self._blank is not True:
+                    result[attr] = self._blank
+                elif self._blank:
+                    result[attr] = None
+            else:
+                result[attr] = value
         return result
 
     __call__ = _transform
